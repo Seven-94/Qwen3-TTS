@@ -18,6 +18,101 @@ We release **Qwen3-TTS**, a series of powerful speech generation capabilities de
 
 ## News
 * 2026.1.22: 🎉🎉🎉 We have released [Qwen3-TTS](https://huggingface.co/collections/Qwen/qwen3-tts) series (0.6B/1.7B) based on Qwen3-TTS-Tokenizer-12Hz. Please check our [blog](https://qwen.ai/blog?id=qwen3tts-0115)!
+* **NEW**: 🚀 Added **Qwen3-TTS Unified Interface** - A complete web UI with 3 tabs (Custom Voice, Voice Design, Voice Clone) + OpenAI-compatible API for easy integration with OpenWebUI and other tools. See [Unified Interface Guide](#unified-interface) below.
+
+## Qwen3-TTS Unified Interface 🎙️
+
+A complete unified interface for Qwen3-TTS featuring:
+
+- **🎨 Gradio Web UI** with 3 functional tabs:
+  - **Custom Voice**: Use 9 premium preset speakers with style control
+  - **Voice Design**: Create custom voices from natural language descriptions
+  - **Voice Clone**: Clone voices from audio files with automatic transcription (ASR)
+
+- **🔌 OpenAI-Compatible API**:
+  - `POST /v1/audio/speech` - Generate speech with cloned voice
+  - `GET /v1/audio/voices` - List available voices
+  - `GET /v1/audio/models` - List available models
+  - `POST /v1/transcribe` - Transcribe audio files
+  - `GET /v1/status` - Server status and GPU info
+
+- **🧠 Smart Memory Management**:
+  - Only one TTS model loaded at a time (saves VRAM)
+  - Automatic model switching between tabs
+  - ASR (Whisper) only loaded when needed for Voice Clone
+  - Persistent voice cloning cache (survives restarts)
+
+- **🔗 OpenWebUI Integration**:
+  - Easy configuration with OpenAI-compatible endpoints
+  - Voice cloning workflow via Gradio, usage via API
+
+### Quick Start - Unified Interface
+
+```bash
+# Clone and setup
+git clone <repo-url>
+cd Qwen3-TTS
+git checkout dev_perso
+
+# Install with UV (recommended)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync
+
+# Configure
+cp .env.example .env
+# Edit .env if needed (API keys, ports, etc.)
+
+# Start the server
+./start.sh
+# or: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+**Access points:**
+- **Gradio UI**: http://localhost:8000/ui
+- **API**: http://localhost:8000
+- **Health**: http://localhost:8000/health
+- **API Docs**: http://localhost:8000/docs
+
+### OpenWebUI Configuration
+
+1. **Clone a voice first** (required step):
+   - Open http://localhost:8000/ui
+   - Go to "Voice Clone" tab
+   - Select an audio file from `./voices/`
+   - Click "Transcribe" then "Clone and Save"
+
+2. **Configure OpenWebUI** (Admin Settings → Audio):
+   | Setting | Value |
+   |---------|-------|
+   | TTS Engine | `OpenAI` |
+   | OpenAI API Base URL | `http://localhost:8000/v1` |
+   | OpenAI API Key | `dummy-key` (or your QWEN3_TTS_API_KEY) |
+   | Voice | `active` |
+   | Model | `qwen3-tts-clone` |
+
+3. **Use in chat**: Click the 🔊 speaker icon on any message to hear it spoken with your cloned voice!
+
+### Project Structure
+
+```
+app/
+├── api/              # OpenAI-compatible REST API
+├── core/             # ModelManager & VoiceCloneCache
+├── ui/               # Gradio interface (3 tabs)
+├── main.py           # FastAPI entry point
+└── config.py         # Configuration (pydantic-settings)
+```
+
+### Environment Variables
+
+See `.env.example` for all options:
+- `QWEN3_TTS_API_KEY` - API authentication
+- `API_HOST` / `API_PORT` - Server binding
+- `DEVICE` / `DTYPE` - GPU settings (cuda, bfloat16)
+- `VOICES_DIR` - Directory for voice files
+- `CACHE_DIR` - Persistent cache directory
+
+---
 
 ## Contents <!-- omit in toc -->
 
@@ -376,14 +471,39 @@ For more tokenizer examples (including different input formats and batch usage),
 
 ### Launch Local Web UI Demo
 
-To launch the Qwen3-TTS web ui demo, simply install the `qwen-tts` package and run `qwen-tts-demo`. Use the command below for help:
+#### Option 1: Unified Interface (Recommended) 🆕
+
+Our new **Unified Interface** provides all 3 models in one application with smart model switching:
+
+```bash
+# Install UV if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Setup and run
+uv sync
+./start.sh
+```
+
+Or manually:
+```bash
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Features:
+- 🎨 **Gradio UI** at `http://localhost:8000/ui` with 3 tabs
+- 🔌 **OpenAI-compatible API** at `http://localhost:8000/v1`
+- 🧠 **Smart memory management** - only loads one model at a time
+- 💾 **Persistent voice cloning** - cloned voices survive restarts
+
+#### Option 2: Original CLI Demo
+
+To launch the original Qwen3-TTS web ui demo:
 
 ```bash
 qwen-tts-demo --help
 ```
 
-To launch the demo, you can use the following commands:
-
+Model-specific demos:
 ```bash
 # CustomVoice model
 qwen-tts-demo Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice --ip 0.0.0.0 --port 8000
@@ -392,8 +512,6 @@ qwen-tts-demo Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign --ip 0.0.0.0 --port 8000
 # Base model
 qwen-tts-demo Qwen/Qwen3-TTS-12Hz-1.7B-Base --ip 0.0.0.0 --port 8000
 ```
-
-And then open `http://<your-ip>:8000`, or access it via port forwarding in tools like VS Code.
 
 #### Base Model HTTPS Notes
 
