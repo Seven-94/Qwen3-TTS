@@ -3,6 +3,48 @@ __pycache__/
 *$py.class
 *.so
 .Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# UV
+.uv/
+
+# Local configuration / secrets
+.env
+.env.*
+!.env.example
+
+# Runtime artifacts (DO NOT COMMIT)
+cache/
+voices/
+modele_tts/
+.sisyphus/
+
+# Logs
+*.log
+logs/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Ruff / typechecker caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
 build/
 develop-eggs/
 dist/
@@ -18,7 +60,3 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-.idea/
-.vscode/
-venv/
-env/
