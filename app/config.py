@@ -121,6 +121,11 @@ class Settings(BaseSettings):
     OUTPUT_FORMAT: str = Field("mp3", description="Audio output format")
     OUTPUT_SAMPLE_RATE: int = Field(24000, description="Output sample rate in Hz")
 
+    # Auto-unload configuration
+    MODEL_UNLOAD_TIMEOUT: int = Field(
+        20, description="Seconds of inactivity before unloading model (0 to disable)"
+    )
+
     class Config:
         """Pydantic settings configuration.
 

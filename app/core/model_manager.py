@@ -6,6 +6,7 @@ only one TTS model is loaded in memory at a time.
 
 import gc
 import threading
+import time
 from typing import Optional, Literal, Dict, Any
 
 # Guarded imports for optional dependencies
@@ -67,6 +68,18 @@ class ModelManager:
 
         self._device = settings.DEVICE
         self._dtype = self._get_dtype()
+
+        # Monitor related attributes
+        self._last_accessed: float = 0.0
+        self._monitor_sleep_interval: float = 1.0
+        self._stop_event = threading.Event()
+
+        # Start monitoring thread
+        if settings.MODEL_UNLOAD_TIMEOUT > 0:
+            self._monitor_thread = threading.Thread(
+                target=self._monitor_loop, daemon=True
+            )
+            self._monitor_thread.start()
 
     def _get_dtype(self):
         """Get torch dtype from settings."""
@@ -142,7 +155,27 @@ class ModelManager:
         if with_asr:
             self._load_asr()
 
+        self._last_accessed = time.time()
         return self._tts_model
+
+    def _monitor_loop(self):
+        """Monitor model usage and unload if inactive."""
+        print(f"Model monitor started (timeout={settings.MODEL_UNLOAD_TIMEOUT}s)")
+
+        while not self._stop_event.is_set():
+            time.sleep(self._monitor_sleep_interval)
+
+            if self._tts_model is None and self._asr_model is None:
+                continue
+
+            # Calculate idle time
+            idle_time = time.time() - self._last_accessed
+
+            if idle_time > settings.MODEL_UNLOAD_TIMEOUT:
+                # Double check with lock potentially, or just unload
+                # The implementation of unload_all handles None checks
+                print(f"Model idle for {idle_time:.1f}s. Unloading...")
+                self.unload_all()
 
     def _load_asr(self):
         """Load ASR model (Whisper)."""
@@ -195,6 +228,7 @@ class ModelManager:
         """Get currently loaded TTS model."""
         if self._tts_model is None:
             raise RuntimeError("No model loaded")
+        self._last_accessed = time.time()
         return self._tts_model
 
     def get_status(self) -> Dict[str, Any]:

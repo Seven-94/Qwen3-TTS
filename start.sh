@@ -27,9 +27,9 @@ if [ ! -d ".venv" ]; then
     uv venv
 fi
 
-# Synchroniser les dépendances
+# Synchroniser les dépendances (--inexact préserve flash-attn installé manuellement)
 echo "🔄 Synchronisation des dépendances UV..."
-uv sync
+uv sync --inexact
 
 echo ""
 echo "📁 Configuration:"
