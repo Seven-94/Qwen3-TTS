@@ -38,8 +38,7 @@ voices/
 
 # Agent logs and metadata
 .sisyphus/
-.github/agents
-.github/skills
+
 
 # Log files
 *.log
@@ -61,3 +60,7 @@ CANNOT-PROCEED.txt
 FINAL-STATUS.txt
 SESSION-CONCLUSION.txt
 READY-TO-BUILD.txt
+
+# Git files
+.github/agents
+.github/skills
