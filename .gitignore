@@ -38,6 +38,8 @@ voices/
 
 # Agent logs and metadata
 .sisyphus/
+.github/agents
+.github/skills
 
 # Log files
 *.log
