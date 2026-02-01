@@ -1,6 +1,7 @@
 This file provides guidance for AI agents working in this repository.
 
 The repo contains:
+
 - The upstream `qwen_tts` Python package.
 - A **Unified Interface** application under `app/`:
   - A Gradio UI mounted under FastAPI at `/ui`.
@@ -8,18 +9,12 @@ The repo contains:
 
 ---
 
-## Project Status (February 2025)
+## Project Status (February 2026)
 
 ### Recent Major Changes
 
-**Docker Simplification** - The Docker build has been completely refactored:
-- **Simplified to single-stage build** in `Dockerfile.base` (removed complex multi-stage)
-- **Fixed CUDA compilation** - Changed from `runtime` to `devel` image to include `nvcc` for FlashAttention compilation
-- **Fixed Numba cache errors** - Added proper environment variables and directory setup in `docker-entrypoint.sh`
-- **Fixed UV path issues** - Using system UV (`/usr/local/bin/uv`) with `--python` flag for venv installations
-- **Working deployment** - Container now starts successfully with GPU support
-
 **New Files Added**:
+
 - `Dockerfile.base` - Single-stage CUDA 13.0 + FlashAttention 2 image
 - `docker-compose.yml` - Container orchestration with GPU support
 - `docker-entrypoint.sh` - Startup script with proper permissions and Numba fix
@@ -29,11 +24,6 @@ The repo contains:
 - `start.sh` - Local development startup script
 - `.env.example` - Configuration template
 - Documentation: `README-DOCKER.md`, `AGENTS.md`, `UV_SETUP.md`
-
-**Security Improvements**:
-- `.gitignore` updated to exclude sensitive files (`.env`, `modele_tts/`, `cache/`, `voices/`, logs)
-- Container runs as non-root user (`qwen3tts`, UID 1001)
-- No secrets in Docker layers
 
 ---
 
@@ -79,6 +69,7 @@ uv run python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Default endpoints:
+
 - UI: `http://localhost:8000/ui`
 - API: `http://localhost:8000/v1`
 - Health: `http://localhost:8000/health`
@@ -86,7 +77,7 @@ Default endpoints:
 
 ---
 
-## Docker Deployment (Working)
+## Docker Deployment
 
 ### Prerequisites
 
@@ -151,12 +142,12 @@ docker run -d \
 
 The container expects these volume mounts:
 
-| Host Path | Container Path | Purpose |
-|-----------|---------------|---------|
-| `./modele_tts` | `/data/models` | TTS model weights (read-only) |
-| `./voices` | `/data/voices` | Voice reference files for cloning |
-| `./cache` | `/data/cache` | Persistent cache (cloned voices, HF cache) |
-| `./.env` | `/app/.env` | Configuration file (read-only) |
+| Host Path      | Container Path | Purpose                                    |
+| -------------- | -------------- | ------------------------------------------ |
+| `./modele_tts` | `/data/models` | TTS model weights (read-only)              |
+| `./voices`     | `/data/voices` | Voice reference files for cloning          |
+| `./cache`      | `/data/cache`  | Persistent cache (cloned voices, HF cache) |
+| `./.env`       | `/app/.env`    | Configuration file (read-only)             |
 
 ### GPU Support
 
@@ -197,6 +188,7 @@ app/
 ```
 
 Key runtime directories (not meant to be committed):
+
 - `modele_tts/` — local model folders (weights)
 - `voices/` — reference audio files for cloning
 - `cache/` — persistent cache (e.g., last cloned voice)
@@ -207,6 +199,7 @@ Key runtime directories (not meant to be committed):
 ## OpenAI-compatible API (for Open-WebUI)
 
 Primary endpoints:
+
 - `POST /v1/audio/speech` — synthesize speech (MP3)
 - `GET /v1/audio/voices` — list available voices (`active` when a clone is ready)
 - `GET /v1/audio/models` — list available models
@@ -214,23 +207,24 @@ Primary endpoints:
 - `GET /v1/status` — server + GPU status
 
 Authentication:
+
 - Simple API key via `QWEN3_TTS_API_KEY`.
 
 ---
 
 ## Open-WebUI configuration
 
-1) Clone a voice once via the UI (Voice Clone tab).
+1. Clone a voice once via the UI (Voice Clone tab).
 
-2) Configure Open-WebUI (Admin Settings → Audio):
+2. Configure Open-WebUI (Admin Settings → Audio):
 
-| Setting | Value |
-|---|---|
-| TTS Engine | `OpenAI` |
-| OpenAI API Base URL | `http://localhost:8000/v1` |
-| OpenAI API Key | `dummy-key` (or your `QWEN3_TTS_API_KEY`) |
-| Voice | `active` |
-| Model | `qwen3-tts-clone` |
+| Setting             | Value                                     |
+| ------------------- | ----------------------------------------- |
+| TTS Engine          | `OpenAI`                                  |
+| OpenAI API Base URL | `http://localhost:8000/v1`                |
+| OpenAI API Key      | `dummy-key` (or your `QWEN3_TTS_API_KEY`) |
+| Voice               | `active`                                  |
+| Model               | `qwen3-tts-clone`                         |
 
 ---
 
@@ -239,6 +233,7 @@ Authentication:
 Use `.env.example` as a template.
 
 Important variables:
+
 - `QWEN3_TTS_API_KEY`
 - `API_HOST`, `API_PORT`
 - `DEVICE`, `DTYPE`, `ATTENTION_IMPLEMENTATION`
@@ -251,6 +246,7 @@ Important variables:
 ## Memory / model-loading rules
 
 The Unified Interface is designed to reduce VRAM usage:
+
 - Only **one TTS model** should be loaded at a time.
 - The Voice Clone flow may additionally load an ASR model.
 - The last cloned voice is cached on disk to survive restarts.
@@ -262,18 +258,22 @@ When modifying the ModelManager or tab switching logic, preserve this behavior.
 ## Known Issues & Solutions
 
 ### Numba Cache Error
+
 **Symptom:** `RuntimeError: cannot cache function '__o_fold': no locator available`
 **Solution:** Fixed in `docker-entrypoint.sh` with `NUMBA_DISABLE_CACHING=1` and writable `/tmp/numba_cache` directory.
 
 ### CUDA/nvcc Not Found
+
 **Symptom:** `FileNotFoundError: [Errno 2] No such file or directory: '/usr/local/cuda/bin/nvcc'`
 **Solution:** Use `nvidia/cuda:13.0.2-cudnn-devel-ubuntu24.04` (devel image) instead of runtime image.
 
 ### UV Path Issues
+
 **Symptom:** `/opt/venv/bin/uv: not found`
 **Solution:** Use `/usr/local/bin/uv` (system UV) with `--python /opt/venv/bin/python` flag.
 
 ### Container Restart Loop
+
 **Symptom:** Container keeps restarting, only showing CUDA banner
 **Solution:** Ensure `docker-entrypoint.sh` is properly copied and executable in the image.
 
