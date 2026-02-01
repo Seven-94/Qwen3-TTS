@@ -1,0 +1,192 @@
+# Docker image builder skill - .dockerignore template
+#
+# Ce fichier template peut être copié dans votre projet
+# et adapté selon vos besoins spécifiques
+
+# ============================================
+# Contrôle de version
+# ============================================
+.git
+.gitignore
+.gitattributes
+.github
+.gitlab-ci.yml
+.travis.yml
+.circleci
+
+# ============================================
+# Dépendances et cache
+# ============================================
+# Node.js
+node_modules
+npm-debug.log
+yarn-error.log
+.npm
+.yarn
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv/
+ENV/
+env/
+.pip
+*.egg-info
+dist/
+build/
+*.egg
+
+# Ruby
+.bundle
+vendor/bundle
+
+# Go
+/vendor
+
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Java
+target/
+.mvn/
+*.class
+
+# ============================================
+# IDE et éditeurs
+# ============================================
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-*
+.project
+.settings
+.classpath
+
+# ============================================
+# Documentation
+# ============================================
+*.md
+!README.md  # Garder README si nécessaire
+docs/
+documentation/
+CHANGELOG*
+LICENSE*
+
+# ============================================
+# Tests
+# ============================================
+tests/
+test/
+__tests__
+*.test.js
+*.test.ts
+*_test.go
+*.spec.js
+*.spec.ts
+coverage/
+.coverage
+htmlcov/
+.pytest_cache
+.tox
+.nox
+
+# ============================================
+# CI/CD
+# ============================================
+Jenkinsfile
+.drone.yml
+azure-pipelines.yml
+bitbucket-pipelines.yml
+.gitlab-ci.yml
+.circleci/
+.github/
+
+# ============================================
+# Docker
+# ============================================
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# ============================================
+# Secrets et configuration sensible
+# ============================================
+.env
+.env.*
+.env.local
+.env.development
+.env.test
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa*
+id_dsa*
+*.ppk
+.aws/
+.ssh/
+credentials*
+passwords.txt
+
+# ============================================
+# Logs et fichiers temporaires
+# ============================================
+*.log
+logs/
+*.tmp
+*.temp
+.cache
+tmp/
+temp/
+.sass-cache/
+
+# ============================================
+# Build artifacts (à adapter selon projet)
+# ============================================
+# Décommentez si vous voulez exclure ces fichiers
+# dist/
+# build/
+# out/
+# .next/
+# .nuxt/
+
+# ============================================
+# Données locales
+# ============================================
+*.sqlite
+*.db
+data/
+uploads/
+media/
+
+# ============================================
+# OS
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================================
+# Divers
+# ============================================
+.history/
+.vs/
+*.bak
+*.orig
+*.rej
