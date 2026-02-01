@@ -1,0 +1,87 @@
+# Docker ignore patterns for Qwen3-TTS
+# These files/directories are excluded from the Docker build context
+# to reduce build time and image size
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data (should be mounted as volumes, not copied)
+modele_tts/
+voices/
+cache/
+*.log
+logs/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing and documentation
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tests/
+docs/
+
+# Docker files themselves (not needed in context)
+Dockerfile
+Dockerfile.base
+docker-compose.yml
+.dockerignore
+
+# Build scripts and logs (entrypoint is needed)
+build-optimized.sh
+build-*.log
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Session and temp files
+.sisyphus/
+session-*.md
+*.tmp
+
+# Node modules (if any frontend)
+node_modules/
+npm-debug.log*
+
+# Large model files (ensure these are never copied)
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.onnx

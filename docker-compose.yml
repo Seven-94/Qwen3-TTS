@@ -1,0 +1,105 @@
+# Docker Compose Configuration for Qwen3-TTS Unified Interface
+#
+# Simple single-stage build - no multi-stage complexity
+#
+# Usage:
+#   docker-compose up -d --build      # Build and start (first time, ~20-30 min)
+#   docker-compose up -d              # Start services in background
+#   docker-compose down               # Stop services
+#   docker-compose down -v            # Stop and remove volumes
+#   docker-compose logs -f            # Follow logs
+#
+# Prerequisites:
+#   - Docker with NVIDIA Container Toolkit (for GPU support)
+#   - NVIDIA drivers installed on host
+#   - Model files in ./modele_tts/ directory
+#
+# First-time setup:
+#   1. Copy .env.example to .env and configure
+#   2. Download models to ./modele_tts/ directory
+#   3. Build and run: docker-compose up -d --build
+
+services:
+  qwen3-tts:
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+    image: qwen3-tts:latest
+    container_name: qwen3-tts-unified
+    restart: unless-stopped
+    
+    # GPU support with NVIDIA Container Toolkit
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    
+    ports:
+      - "${API_PORT:-8000}:8000"
+    
+    volumes:
+      # Mount model directory (read-only recommended)
+      - ./modele_tts:/data/models:ro
+      # Mount voices directory for voice cloning
+      - ./voices:/data/voices
+      # Mount cache directory for persistence
+      - ./cache:/data/cache
+      # Mount environment file
+      - ./.env:/app/.env:ro
+    
+    environment:
+      # Core configuration
+      - DEVICE=${DEVICE:-cuda}
+      - DTYPE=${DTYPE:-bfloat16}
+      - ATTENTION_IMPLEMENTATION=${ATTENTION_IMPLEMENTATION:-flash_attention_2}
+      
+      # Paths (should match volume mounts)
+      - MODELS_DIR=/data/models
+      - VOICES_DIR=/data/voices
+      - CACHE_DIR=/data/cache
+      
+      # API configuration
+      - QWEN3_TTS_API_KEY=${QWEN3_TTS_API_KEY:-dummy-key}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      
+      # ASR configuration for voice cloning
+      - ASR_MODEL=${ASR_MODEL:-openai/whisper-large-v3}
+      - ASR_DEVICE=${ASR_DEVICE:-cuda}
+      
+      # Audio output settings
+      - OUTPUT_FORMAT=${OUTPUT_FORMAT:-mp3}
+      - OUTPUT_SAMPLE_RATE=${OUTPUT_SAMPLE_RATE:-24000}
+      
+      # HuggingFace cache (optional, for model downloads)
+      - HF_HOME=/data/cache/huggingface
+      - TRANSFORMERS_CACHE=/data/cache/transformers
+      
+      # Numba configuration
+      - NUMBA_DISABLE_CACHING=1
+    
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: Add a reverse proxy for SSL termination
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: qwen3-tts-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "443:443"
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - qwen3-tts
+  #   profiles:
+  #     - with-nginx

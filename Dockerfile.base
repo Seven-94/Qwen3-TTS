@@ -1,0 +1,68 @@
+# Qwen3-TTS Base Image with FlashAttention 2
+# Simple single-stage build - no multi-stage complexity
+# Build time: ~20-30 minutes (one-time)
+
+FROM nvidia/cuda:13.0.2-cudnn-devel-ubuntu24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV MAX_JOBS=8
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 \
+    python3.12-dev \
+    python3.12-venv \
+    python3-pip \
+    git \
+    ffmpeg \
+    libsox-dev \
+    sox \
+    build-essential \
+    curl \
+    ca-certificates \
+    ninja-build \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install UV
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv && \
+    mv /root/.local/bin/uvx /usr/local/bin/uvx
+
+WORKDIR /app
+
+# Copy project files
+COPY pyproject.toml uv.lock ./
+COPY qwen_tts/ ./qwen_tts/
+COPY app/ ./app/
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+
+# Create complete venv with all dependencies
+# This is the slow part - compiled once in this base image
+# Use system uv with --python to target the venv
+RUN /usr/local/bin/uv venv --python 3.12 /opt/venv && \
+    /usr/local/bin/uv pip install --python /opt/venv/bin/python torch==2.10.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130 && \
+    /usr/local/bin/uv pip install --python /opt/venv/bin/python wheel packaging psutil && \
+    /usr/local/bin/uv pip install --python /opt/venv/bin/python flash-attn --no-build-isolation --no-cache-dir && \
+    /usr/local/bin/uv pip install --python /opt/venv/bin/python -e .
+
+# Set environment
+ENV PATH="/opt/venv/bin:/usr/local/bin:$PATH"
+ENV PYTHONPATH="/opt/venv/lib/python3.12/site-packages"
+ENV VIRTUAL_ENV="/opt/venv"
+
+# Create app user
+RUN useradd -m -u 1001 qwen3tts && \
+    mkdir -p /data/models /data/voices /data/cache && \
+    chown -R qwen3tts:qwen3tts /app /data && \
+    chmod +x /app/docker-entrypoint.sh
+
+# Labels for the base image
+LABEL maintainer="Qwen3-TTS Team"
+LABEL description="Base image with PyTorch CUDA 13.0 and FlashAttention 2"
+LABEL cuda.version="13.0"
+LABEL pytorch.version="2.10.0"
+
+EXPOSE 8000
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
