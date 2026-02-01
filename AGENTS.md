@@ -8,6 +8,35 @@ The repo contains:
 
 ---
 
+## Project Status (February 2025)
+
+### Recent Major Changes
+
+**Docker Simplification** - The Docker build has been completely refactored:
+- **Simplified to single-stage build** in `Dockerfile.base` (removed complex multi-stage)
+- **Fixed CUDA compilation** - Changed from `runtime` to `devel` image to include `nvcc` for FlashAttention compilation
+- **Fixed Numba cache errors** - Added proper environment variables and directory setup in `docker-entrypoint.sh`
+- **Fixed UV path issues** - Using system UV (`/usr/local/bin/uv`) with `--python` flag for venv installations
+- **Working deployment** - Container now starts successfully with GPU support
+
+**New Files Added**:
+- `Dockerfile.base` - Single-stage CUDA 13.0 + FlashAttention 2 image
+- `docker-compose.yml` - Container orchestration with GPU support
+- `docker-entrypoint.sh` - Startup script with proper permissions and Numba fix
+- `.dockerignore` - Excludes build artifacts and sensitive files
+- `app/` - Complete Unified Interface application (25 files)
+- `test-docker.sh` - Validation script for container testing
+- `start.sh` - Local development startup script
+- `.env.example` - Configuration template
+- Documentation: `README-DOCKER.md`, `AGENTS.md`, `UV_SETUP.md`
+
+**Security Improvements**:
+- `.gitignore` updated to exclude sensitive files (`.env`, `modele_tts/`, `cache/`, `voices/`, logs)
+- Container runs as non-root user (`qwen3tts`, UID 1001)
+- No secrets in Docker layers
+
+---
+
 ## Environment setup (UV)
 
 Use **uv** to manage the virtual environment and dependencies.
@@ -27,7 +56,7 @@ uv run <command>
 To install FlashAttention with the proper CUDA configuration, use:
 
 ```bash
-bash install_flash_attn.sh
+bash install_flash_attn2.sh
 ```
 
 This script installs PyTorch (CUDA 13.0 wheel index) and compiles
@@ -57,7 +86,7 @@ Default endpoints:
 
 ---
 
-## Docker Deployment
+## Docker Deployment (Working)
 
 ### Prerequisites
 
@@ -71,11 +100,14 @@ Default endpoints:
 # 1. Copy and configure environment
 cp .env.example .env
 
-# 2. Start the container
-docker-compose up -d
+# 2. Build and start (first time ~20-30 min for FlashAttention compilation)
+docker-compose up -d --build
 
 # 3. View logs
-docker-compose logs -f
+docker-compose logs -f qwen3-tts-unified
+
+# 4. Test the deployment
+./test-docker.sh
 ```
 
 ### Docker Compose Commands
@@ -94,18 +126,18 @@ docker-compose down -v
 docker-compose build --no-cache
 
 # View logs
-docker-compose logs -f qwen3-tts
+docker-compose logs -f qwen3-tts-unified
 ```
 
 ### Manual Docker Build
 
 ```bash
 # Build image
-docker build -t qwen3-tts:latest .
+docker build -f Dockerfile.base -t qwen3-tts:latest .
 
 # Run with GPU support
 docker run -d \
-  --name qwen3-tts \
+  --name qwen3-tts-unified \
   --gpus all \
   -p 8000:8000 \
   -v $(pwd)/modele_tts:/data/models:ro \
@@ -139,40 +171,11 @@ docker run --rm --gpus all nvidia/cuda:13.0.2-runtime-ubuntu24.04 nvidia-smi
 
 **Container User:** The container runs as non-root user `qwen3tts` with UID 1001 (to avoid conflicts with the default Ubuntu 24.04 user).
 
-**Flash Attention 2:** Automatically installed during the Docker build for optimal GPU performance. The compilation happens in the builder stage with CUDA development tools and is copied to the runtime image.
+**Flash Attention 2:** Automatically installed during the Docker build for optimal GPU performance. The compilation requires the CUDA devel image (includes `nvcc`).
 
-### Optimized Build (High-Performance Hardware)
+**Numba Cache Fix:** The `docker-entrypoint.sh` sets `NUMBA_CACHE_DIR=/tmp/numba_cache` and `NUMBA_DISABLE_CACHING=1` to prevent librosa/numba cache errors.
 
-For systems with 32+ threads and 128GB+ RAM, use the optimized two-stage build:
-
-**Architecture:**
-- `Dockerfile.base` - Pre-compiled base image with PyTorch CUDA 13.0 + FlashAttention 2 + ALL app dependencies (~20-30 min build, once)
-- `Dockerfile` - Application layer only (~30 sec build, for updates)
-
-**First-time setup:**
-```bash
-# Build base + app images (takes 20-30 minutes)
-./build-optimized.sh --base
-
-# Start the container
-docker-compose up -d
-```
-
-**Subsequent updates (app code only):**
-```bash
-# Fast rebuild (30 seconds) - base image reused
-./build-optimized.sh --app-only
-docker-compose up -d
-```
-
-**Build options:**
-```bash
-./build-optimized.sh --help
-# Options:
-#   --base        Build base + app (first time)
-#   --app-only    Build only app (fast update)
-#   --no-cache    Rebuild without cache
-```
+**Build Time:** First build takes ~20-30 minutes due to FlashAttention compilation. Subsequent builds are faster.
 
 ---
 
@@ -184,6 +187,8 @@ app/
 │   ├── routes/       # speech, voices, models, transcribe, status
 │   └── schemas/      # Pydantic models for OpenAI compatibility
 ├── core/             # ModelManager and VoiceClone cache
+│   ├── model_manager.py      # Smart model loading/switching
+│   └── voice_clone_cache.py  # Persistent voice storage
 ├── ui/               # Gradio UI (3 tabs)
 │   ├── tabs/         # custom_voice_tab, voice_design_tab, voice_clone_tab
 │   └── components/   # shared UI widgets
@@ -254,6 +259,26 @@ When modifying the ModelManager or tab switching logic, preserve this behavior.
 
 ---
 
+## Known Issues & Solutions
+
+### Numba Cache Error
+**Symptom:** `RuntimeError: cannot cache function '__o_fold': no locator available`
+**Solution:** Fixed in `docker-entrypoint.sh` with `NUMBA_DISABLE_CACHING=1` and writable `/tmp/numba_cache` directory.
+
+### CUDA/nvcc Not Found
+**Symptom:** `FileNotFoundError: [Errno 2] No such file or directory: '/usr/local/cuda/bin/nvcc'`
+**Solution:** Use `nvidia/cuda:13.0.2-cudnn-devel-ubuntu24.04` (devel image) instead of runtime image.
+
+### UV Path Issues
+**Symptom:** `/opt/venv/bin/uv: not found`
+**Solution:** Use `/usr/local/bin/uv` (system UV) with `--python /opt/venv/bin/python` flag.
+
+### Container Restart Loop
+**Symptom:** Container keeps restarting, only showing CUDA banner
+**Solution:** Ensure `docker-entrypoint.sh` is properly copied and executable in the image.
+
+---
+
 ## Coding conventions
 
 ### Project structure
@@ -297,8 +322,21 @@ Use Pydantic models for API schemas and validate inputs early.
 ## Development workflow
 
 - Prefer minimal, focused changes (avoid drive-by refactors in bug fixes).
-- Don’t commit secrets or large artifacts:
+- Don't commit secrets or large artifacts:
   - `.env`, `cache/`, `voices/`, `modele_tts/`, `.venv/`, `__pycache__/`, `.sisyphus/`
 - Prefer committing `uv.lock` (dependency pinning / reproducibility).
 - If you introduce new tooling (ruff/pytest config), update `pyproject.toml`
   and keep it consistent with existing dependencies.
+
+---
+
+## Agent-specific notes
+
+When working on this codebase:
+
+1. **Always check the current branch** - Most work should be on `dev_perso`
+2. **Don't modify files outside `.sisyphus/` directly** - Use subagents for implementation
+3. **Document blockers immediately** - If you encounter environment limitations (e.g., no Docker access), document extensively
+4. **Test Docker changes** - If modifying Docker files, ensure the build actually works
+5. **Preserve memory management** - The ModelManager's one-model-at-a-time behavior is critical for VRAM usage
+6. **Update AGENTS.md** - When making significant changes, update this file
