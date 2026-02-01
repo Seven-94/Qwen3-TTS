@@ -22,3 +22,40 @@ wheels/
 .vscode/
 venv/
 env/
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# UV virtual environment
+.venv/
+
+# Local data directories (large files)
+modele_tts/
+cache/
+voices/
+
+# Agent logs and metadata
+.sisyphus/
+
+# Log files
+*.log
+build-*.log
+server.log
+
+# Session logs
+session-*.md
+
+# Docker volumes (if any)
+.docker/
+
+# Session logs from previous work
+FINAL-REPORT.txt
+DOCKER-STATUS.txt
+EXECUTIVE-SUMMARY.txt
+PROJECT-STATUS.txt
+CANNOT-PROCEED.txt
+FINAL-STATUS.txt
+SESSION-CONCLUSION.txt
+READY-TO-BUILD.txt
