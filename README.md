@@ -28,6 +28,8 @@ A complete unified interface for Qwen3-TTS featuring:
   - **Custom Voice**: Use 9 premium preset speakers with style control
   - **Voice Design**: Create custom voices from natural language descriptions
   - **Voice Clone**: Clone voices from audio files with automatic transcription (ASR)
+    - **Upload voices directly** from the UI (`.mp3`, `.wav`, `.flac`, `.opus`)
+    - Automatic permission fix at startup via `start.sh`
 
 - **🔌 OpenAI-Compatible API**:
   - `POST /v1/audio/speech` - Generate speech with cloned voice
@@ -78,7 +80,8 @@ cp .env.example .env
 1. **Clone a voice first** (required step):
    - Open http://localhost:8000/ui
    - Go to "Voice Clone" tab
-   - Select an audio file from `./voices/`
+   - **Upload a voice file**: Click "📤 Upload New Voice" and upload an audio file (`.mp3`, `.wav`, `.flac`, `.opus`)
+   - Or select an existing file from the dropdown
    - Click "Transcribe" then "Clone and Save"
 
 2. **Configure OpenWebUI** (Admin Settings → Audio):

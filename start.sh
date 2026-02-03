@@ -21,6 +21,17 @@ fi
 # Créer les répertoires si nécessaires
 mkdir -p voices cache
 
+# Vérifier et corriger les permissions des dossiers voices/ et cache/
+# (nécessaire si les dossiers ont été créés par Docker ou un autre utilisateur)
+for dir in voices cache; do
+    if [ -d "$dir" ] && [ ! -w "$dir" ]; then
+        echo "⚠️  Le dossier $dir/ n'est pas accessible en écriture."
+        echo "   Correction des permissions (sudo requis)..."
+        sudo chown -R "$(whoami):$(whoami)" "$dir/"
+        echo "✅ Permissions de $dir/ corrigées."
+    fi
+done
+
 # Initialiser l'environnement UV si nécessaire
 if [ ! -d ".venv" ]; then
     echo "🔄 Création de l'environnement virtuel UV..."

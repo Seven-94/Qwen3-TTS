@@ -190,9 +190,15 @@ app/
 Key runtime directories (not meant to be committed):
 
 - `modele_tts/` — local model folders (weights)
-- `voices/` — reference audio files for cloning
+- `voices/` — reference audio files for cloning (can upload via UI)
 - `cache/` — persistent cache (e.g., last cloned voice)
 - `.env` — local configuration
+
+### Voice Upload Feature
+
+Users can upload voice reference files directly from the Gradio UI (Voice Clone tab → "📤 Upload New Voice" accordion). Supported formats: `.mp3`, `.wav`, `.flac`, `.opus`.
+
+**Permissions handling**: The `voices/` folder may have incorrect permissions if created by Docker (owned by UID 1001). The `start.sh` script automatically detects and fixes this at startup (requires sudo if the folder is not writable).
 
 ---
 

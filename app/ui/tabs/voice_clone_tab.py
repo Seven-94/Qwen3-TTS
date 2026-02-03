@@ -4,10 +4,11 @@ Allows voice cloning from audio files with optional ASR transcription.
 """
 
 import os
+import shutil
 import gradio as gr
 import numpy as np
 from pathlib import Path
-from typing import Tuple, Optional, Any
+from typing import Tuple, Optional, Any, List
 
 from app.core.model_manager import model_manager
 from app.core.voice_clone_cache import voice_cache
@@ -15,8 +16,11 @@ from app.config import Settings
 
 settings = Settings()
 
+# Supported audio formats for voice cloning
+ALLOWED_AUDIO_EXTENSIONS = [".wav", ".mp3", ".flac", ".opus"]
 
-def get_voice_files() -> list[str]:
+
+def get_voice_files() -> List[str]:
     """Get list of audio files in voices directory."""
     voices_dir = Path(settings.VOICES_DIR)
     voices_dir.mkdir(exist_ok=True)
@@ -24,10 +28,61 @@ def get_voice_files() -> list[str]:
         [
             str(f)
             for f in voices_dir.glob("*")
-            if f.suffix.lower() in [".wav", ".mp3", ".flac", ".ogg"]
+            if f.suffix.lower() in ALLOWED_AUDIO_EXTENSIONS
         ]
     )
     return files
+
+
+def upload_voice_file(file) -> Tuple[gr.Dropdown, str]:
+    """Upload a voice file to the voices directory.
+
+    Args:
+        file: Uploaded file from Gradio File component.
+
+    Returns:
+        Tuple of (updated dropdown choices, status message).
+    """
+    if file is None:
+        return gr.Dropdown(choices=get_voice_files()), "❌ No file selected."
+
+    # Get file path (Gradio provides a temp file path)
+    src_path = Path(file.name if hasattr(file, "name") else file)
+    filename = src_path.name
+    extension = src_path.suffix.lower()
+
+    # Validate extension
+    if extension not in ALLOWED_AUDIO_EXTENSIONS:
+        allowed = ", ".join(ALLOWED_AUDIO_EXTENSIONS)
+        return (
+            gr.Dropdown(choices=get_voice_files()),
+            f"❌ Invalid format '{extension}'. Allowed: {allowed}",
+        )
+
+    # Destination path
+    voices_dir = Path(settings.VOICES_DIR)
+    voices_dir.mkdir(exist_ok=True)
+    dest_path = voices_dir / filename
+
+    # Handle duplicates: add suffix if file exists
+    if dest_path.exists():
+        base = src_path.stem
+        counter = 1
+        while dest_path.exists():
+            dest_path = voices_dir / f"{base}_{counter}{extension}"
+            counter += 1
+
+    try:
+        shutil.copy2(src_path, dest_path)
+        return (
+            gr.Dropdown(choices=get_voice_files(), value=str(dest_path)),
+            f"✅ Uploaded: {dest_path.name}",
+        )
+    except Exception as e:
+        return (
+            gr.Dropdown(choices=get_voice_files()),
+            f"❌ Upload failed: {e}",
+        )
 
 
 def transcribe_audio(audio_path: str) -> str:
@@ -143,9 +198,22 @@ def create_voice_clone_tab() -> gr.Tab:
                     label="Select Audio File",
                     choices=get_voice_files(),
                     interactive=True,
-                    info="Place files in ./voices/ directory",
+                    info="Select a voice file or upload a new one below",
                 )
-                refresh_btn = gr.Button("Refresh File List", size="sm")
+                refresh_btn = gr.Button("🔄 Refresh File List", size="sm")
+
+                # Upload section
+                with gr.Accordion("📤 Upload New Voice", open=False):
+                    upload_file = gr.File(
+                        label="Upload Audio File",
+                        file_types=[".wav", ".mp3", ".flac", ".opus"],
+                        type="filepath",
+                    )
+                    upload_status = gr.Textbox(
+                        label="Status",
+                        interactive=False,
+                        placeholder="Upload a file to see status...",
+                    )
 
                 audio_player = gr.Audio(
                     label="Preview Reference",
@@ -182,6 +250,13 @@ def create_voice_clone_tab() -> gr.Tab:
             return gr.Dropdown(choices=get_voice_files())
 
         refresh_btn.click(fn=update_files, outputs=[file_dropdown])
+
+        # Upload handler
+        upload_file.change(
+            fn=upload_voice_file,
+            inputs=[upload_file],
+            outputs=[file_dropdown, upload_status],
+        )
 
         file_dropdown.change(
             fn=lambda x: x, inputs=[file_dropdown], outputs=[audio_player]

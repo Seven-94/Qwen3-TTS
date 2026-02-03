@@ -12,7 +12,7 @@ Example:
 
 """
 
-from typing import Literal, Optional, Any, TYPE_CHECKING
+from typing import Literal, Any
 import importlib
 
 # Silence pyright missing import errors for optional runtime deps
@@ -32,6 +32,8 @@ except Exception:
 if _pydantic is not None:
     Field = getattr(_pydantic, "Field")
     validator = getattr(_pydantic, "validator")
+    field_validator = getattr(_pydantic, "field_validator", None)
+    ConfigDict = getattr(_pydantic, "ConfigDict", None)
     BaseSettings = getattr(_pydantic, "BaseModel")
 else:
     # Minimal stubs for environments without pydantic installed.
@@ -43,6 +45,9 @@ else:
             return func
 
         return _dec
+
+    field_validator = validator  # type: ignore[assignment]
+    ConfigDict = dict  # type: ignore[assignment,misc]
 
     class BaseSettings:  # type: ignore[misc]
         pass
@@ -80,6 +85,7 @@ class Settings(BaseSettings):
 
         output_format: Audio output file format.
         output_sample_rate: Output sample rate in Hz.
+        model_unload_timeout: Seconds of inactivity before unloading model.
     """
 
     # API Configuration
@@ -126,17 +132,27 @@ class Settings(BaseSettings):
         20, description="Seconds of inactivity before unloading model (0 to disable)"
     )
 
-    class Config:
-        """Pydantic settings configuration.
+    if _pyd_settings is not None and ConfigDict is not None:
+        model_config = ConfigDict(
+            env_file=".env",
+            env_prefix="",
+            case_sensitive=False,
+            extra="ignore",  # Allow extra fields from .env without error
+        )
+    else:
+        # Fallback for older pydantic versions or when not available
+        class Config:
+            """Pydantic settings configuration.
 
-        env_file tells pydantic to read a .env file located at the
-        project root.  Environment variable names are expected to be
-        UPPER_SNAKE_CASE matching attribute names.
-        """
+            env_file tells pydantic to read a .env file located at the
+            project root.  Environment variable names are expected to be
+            UPPER_SNAKE_CASE matching attribute names.
+            """
 
-        env_file = ".env"
-        env_prefix = ""
-        case_sensitive = False
+            env_file = ".env"
+            env_prefix = ""
+            case_sensitive = False
+            extra = "ignore"
 
     @validator("API_PORT", "UI_PORT", "OUTPUT_SAMPLE_RATE")
     def _validate_positive(cls, v: int) -> int:  # type: ignore[override]
