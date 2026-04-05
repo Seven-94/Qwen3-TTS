@@ -166,6 +166,8 @@ docker run --rm --gpus all nvidia/cuda:13.0.2-runtime-ubuntu24.04 nvidia-smi
 
 **Numba Cache Fix:** The `docker-entrypoint.sh` sets `NUMBA_CACHE_DIR=/tmp/numba_cache` and `NUMBA_DISABLE_CACHING=1` to prevent librosa/numba cache errors.
 
+**Model Download CLI:** Use the `hf` CLI (e.g., `hf download`) instead of the deprecated `huggingface-cli download` for fetching models from Hugging Face. Ensure the `huggingface_hub[cli]` package is installed.
+
 **Build Time:** First build takes ~20-30 minutes due to FlashAttention compilation. Subsequent builds are faster.
 
 ---

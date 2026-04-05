@@ -37,6 +37,23 @@ All preparatory work is **finished and verified**:
 
 ## ⏳ WHAT YOU NEED TO DO
 
+### 📥 Step 0: Download Models (Mandatory)
+Models are NOT included in the Docker image to keep the size manageable. You must download them to the `modele_tts/` directory before building or starting the container.
+
+> [!WARNING]
+> `huggingface-cli download` is deprecated. Use `hf download` instead.
+
+```bash
+# 1. Install hf cli if not already installed
+pip install -U "huggingface_hub[cli]"
+
+# 2. Download the required model components to ./modele_tts/
+hf download Qwen/Qwen3-TTS-Tokenizer-12Hz --local-dir ./modele_tts/Qwen3-TTS-Tokenizer-12Hz
+hf download Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice --local-dir ./modele_tts/Qwen3-TTS-12Hz-1.7B-CustomVoice
+hf download Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign --local-dir ./modele_tts/Qwen3-TTS-12Hz-1.7B-VoiceDesign
+hf download Qwen/Qwen3-TTS-12Hz-1.7B-Base --local-dir ./modele_tts/Qwen3-TTS-12Hz-1.7B-Base
+```
+
 ### Step 1: Build (20-30 minutes)
 ```bash
 docker-compose up -d --build
