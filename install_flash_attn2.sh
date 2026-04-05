@@ -85,8 +85,8 @@ log "Environnement virtuel .venv/ détecté ✓"
 log "Installation de PyTorch ${PYTORCH_VERSION} avec CUDA ${CUDA_VERSION}..."
 
 # Désinstaller d'abord les versions potentiellement incompatibles
-log "Nettoyage des versions existantes de PyTorch..."
-uv pip uninstall torch torchvision torchaudio 2>/dev/null || true
+log "Nettoyage des versions existantes de PyTorch et Flash Attention..."
+uv pip uninstall torch torchvision torchaudio flash-attn 2>/dev/null || true
 
 # Nettoyer les bibliothèques CUDA 12 conflictuelles
 log "Suppression des bibliothèques CUDA 12 conflictuelles..."
@@ -136,7 +136,8 @@ log "Installation de Flash Attention (cela peut prendre plusieurs minutes)..."
 log "La compilation se fait sans isolation pour utiliser le PyTorch CUDA 13.0 installé..."
 
 # Installation sans isolation de build pour utiliser notre PyTorch
-uv pip install flash-attn --no-build-isolation --no-cache-dir
+# On force --no-binary pour éviter de télécharger un wheel pré-compilé pour CUDA 12
+uv pip install flash-attn --no-build-isolation --no-cache-dir --no-binary flash-attn
 
 ################################################################################
 # Vérification finale
